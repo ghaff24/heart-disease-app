@@ -4,6 +4,15 @@ import pandas as pd
 import pickle
 
 # -------------------------
+# PAGE CONFIG
+# -------------------------
+st.set_page_config(
+    page_title="Heart Disease Predictor",
+    page_icon="❤️",
+    layout="wide"
+)
+
+# -------------------------
 # LOAD MODELS
 # -------------------------
 model = pickle.load(open("model.pkl", "rb"))
@@ -11,129 +20,112 @@ scaler = pickle.load(open("scaler.pkl", "rb"))
 imputer = pickle.load(open("imputer.pkl", "rb"))
 
 # -------------------------
-# UI TITLE
+# TITLE
 # -------------------------
 st.title("❤️ Heart Disease Risk Predictor")
-st.write("AI-powered medical risk analysis system")
+st.write("AI-powered clinical decision support system")
 
-# -------------------------
-# SMART INPUT UI
-# -------------------------
-input_dict = {}
+# =========================
+# SIDEBAR INPUT
+# =========================
+st.sidebar.header("🧍 Patient Information")
 
-with st.form("form"):
+age_group = st.sidebar.selectbox(
+    "Age Group",
+    ["20-30", "30-40", "40-50", "50-60", "60-70", "70+"]
+)
 
-    st.subheader("🧍 Patient Information")
+age_map = {
+    "20-30": 25,
+    "30-40": 35,
+    "40-50": 45,
+    "50-60": 55,
+    "60-70": 65,
+    "70+": 75
+}
+age = age_map[age_group]
 
-    col1, col2 = st.columns(2)
+sex = st.sidebar.selectbox("Sex", ["Male", "Female"])
+sex = 1 if sex == "Male" else 0
 
-    # AGE GROUP
-    with col1:
-        age_group = st.selectbox(
-            "Age Group",
-            ["20-30", "30-40", "40-50", "50-60", "60-70", "70+"]
-        )
+cp_map = {
+    "Typical Angina": 0,
+    "Atypical Angina": 1,
+    "Non-Anginal Pain": 2,
+    "Asymptomatic": 3
+}
+cp = st.sidebar.selectbox("Chest Pain Type", list(cp_map.keys()))
+cp = cp_map[cp]
 
-        age_map = {
-            "20-30": 25,
-            "30-40": 35,
-            "40-50": 45,
-            "50-60": 55,
-            "60-70": 65,
-            "70+": 75
-        }
+trestbps = st.sidebar.slider("Resting Blood Pressure", 80, 200, 120)
+chol = st.sidebar.slider("Cholesterol", 100, 600, 200)
 
-        input_dict["age"] = age_map[age_group]
+fbs = st.sidebar.selectbox("Fasting Blood Sugar > 120", ["No", "Yes"])
+fbs = 1 if fbs == "Yes" else 0
 
-    # SEX
-    with col2:
-        sex = st.selectbox("Sex", ["Male", "Female"])
-        input_dict["sex"] = 1 if sex == "Male" else 0
+restecg_map = {
+    "Normal": 0,
+    "ST-T abnormality": 1,
+    "LV hypertrophy": 2
+}
+restecg = st.sidebar.selectbox("Rest ECG", list(restecg_map.keys()))
+restecg = restecg_map[restecg]
 
-    # CHEST PAIN TYPE
-    cp_map = {
-        "Typical Angina": 0,
-        "Atypical Angina": 1,
-        "Non-Anginal Pain": 2,
-        "Asymptomatic": 3
-    }
+thalch = st.sidebar.slider("Max Heart Rate", 60, 220, 150)
 
-    cp = st.selectbox("Chest Pain Type", list(cp_map.keys()))
-    input_dict["cp"] = cp_map[cp]
+exang = st.sidebar.selectbox("Exercise Angina", ["No", "Yes"])
+exang = 1 if exang == "Yes" else 0
 
-    # NUMERIC FEATURES
-    input_dict["trestbps"] = st.slider("Resting Blood Pressure", 80, 200, 120)
-    input_dict["chol"] = st.slider("Cholesterol", 100, 600, 200)
+oldpeak = st.sidebar.slider("Oldpeak", 0.0, 6.0, 1.0)
 
-    fbs = st.selectbox("Fasting Blood Sugar > 120", ["No", "Yes"])
-    input_dict["fbs"] = 1 if fbs == "Yes" else 0
+slope_map = {
+    "Upsloping (normal)": 0,
+    "Flat (medium risk)": 1,
+    "Downsloping (high risk)": 2
+}
+slope = st.sidebar.selectbox("Slope", list(slope_map.keys()))
+slope = slope_map[slope]
 
-    # -------------------------
-    # REST ECG (FIXED)
-    # -------------------------
-    restecg_map = {
-        "0 - Normal": 0,
-        "1 - ST-T wave abnormality": 1,
-        "2 - Left ventricular hypertrophy": 2
-    }
+ca_map = {
+    "0 vessels": 0,
+    "1 vessel": 1,
+    "2 vessels": 2,
+    "3 vessels": 3
+}
+ca = st.sidebar.selectbox("Major Vessels", list(ca_map.keys()))
+ca = ca_map[ca]
 
-    restecg = st.selectbox("Rest ECG", list(restecg_map.keys()))
-    input_dict["restecg"] = restecg_map[restecg]
+thal_map = {
+    "Normal": 0,
+    "Fixed defect": 1,
+    "Reversible defect": 2,
+    "Unknown": 3
+}
+thal = st.sidebar.selectbox("Thal", list(thal_map.keys()))
+thal = thal_map[thal]
 
-    # HEART RATE
-    input_dict["thalch"] = st.slider("Max Heart Rate", 60, 220, 150)
-
-    exang = st.selectbox("Exercise Induced Angina", ["No", "Yes"])
-    input_dict["exang"] = 1 if exang == "Yes" else 0
-
-    input_dict["oldpeak"] = st.slider("Oldpeak", 0.0, 6.0, 1.0)
-
-    # -------------------------
-    # SLOPE (FIXED)
-    # -------------------------
-    slope_map = {
-        "0 - Upsloping (Normal)": 0,
-        "1 - Flat (Medium risk)": 1,
-        "2 - Downsloping (High risk)": 2
-    }
-
-    slope = st.selectbox("Slope of ST segment", list(slope_map.keys()))
-    input_dict["slope"] = slope_map[slope]
-
-    # -------------------------
-    # CA (Vessels)
-    # -------------------------
-    ca_map = {
-        "0 - No major vessel blocked": 0,
-        "1 - 1 vessel blocked": 1,
-        "2 - 2 vessels blocked": 2,
-        "3 - 3 vessels blocked": 3
-    }
-
-    ca = st.selectbox("Number of major vessels colored", list(ca_map.keys()))
-    input_dict["ca"] = ca_map[ca]
-
-    # -------------------------
-    # THAL (FIXED)
-    # -------------------------
-    thal_map = {
-        "0 - Normal": 0,
-        "1 - Fixed defect": 1,
-        "2 - Reversible defect": 2,
-        "3 - Unknown": 3
-    }
-
-    thal = st.selectbox("Thal (stress test result)", list(thal_map.keys()))
-    input_dict["thal"] = thal_map[thal]
-
-    submitted = st.form_submit_button("Predict Risk")
-
-# -------------------------
+# =========================
 # PREDICTION
-# -------------------------
-if submitted:
+# =========================
+if st.sidebar.button("Predict Risk"):
 
-    data = pd.DataFrame([input_dict])
+    input_data = {
+        "age": age,
+        "sex": sex,
+        "cp": cp,
+        "trestbps": trestbps,
+        "chol": chol,
+        "fbs": fbs,
+        "restecg": restecg,
+        "thalch": thalch,
+        "exang": exang,
+        "oldpeak": oldpeak,
+        "slope": slope,
+        "ca": ca,
+        "thal": thal
+    }
+
+    data = pd.DataFrame([input_data])
 
     feature_order = [
         "age", "sex", "cp", "trestbps", "chol", "fbs",
@@ -151,21 +143,54 @@ if submitted:
 
     risk = probability * 100
 
-    st.subheader("📊 Risk Result")
+    # =========================
+    # OUTPUT
+    # =========================
+    col1, col2 = st.columns(2)
 
-    st.progress(int(risk))
-    st.metric("Heart Disease Risk", f"{risk:.2f}%")
+    with col1:
+        st.subheader("📊 Risk Score")
+        st.progress(int(risk))
+        st.metric("Risk Probability", f"{risk:.2f}%")
 
-    if risk < 30:
-        st.success("🟢 Low Risk")
-        st.write("No major cardiovascular risk detected.")
+    with col2:
+        st.subheader("🧠 Interpretation")
 
-    elif risk < 70:
-        st.warning("🟡 Moderate Risk")
-        st.write("Some risk factors present. Monitoring recommended.")
+        if risk < 30:
+            st.success("Low Risk")
+        elif risk < 70:
+            st.warning("Moderate Risk")
+        else:
+            st.error("High Risk")
 
-    else:
-        st.error("🔴 High Risk")
-        st.write("High probability detected. Medical attention recommended.")
+    st.info(f"Final model probability: {probability:.3f}")
 
-    st.write(f"Probability score: **{probability:.2f}**")
+    # =========================
+    # DOWNLOAD REPORT
+    # =========================
+    report = pd.DataFrame([{
+        "Age": age,
+        "Sex": "Male" if sex == 1 else "Female",
+        "Chest Pain Type": cp,
+        "Resting BP": trestbps,
+        "Cholesterol": chol,
+        "Fasting Blood Sugar": fbs,
+        "Rest ECG": restecg,
+        "Max Heart Rate": thalch,
+        "Exercise Angina": exang,
+        "Oldpeak": oldpeak,
+        "Slope": slope,
+        "Major Vessels": ca,
+        "Thal": thal,
+        "Risk Probability": round(probability, 4),
+        "Risk Percentage": round(risk, 2)
+    }])
+
+    csv = report.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        label="📥 Download Patient Risk Report",
+        data=csv,
+        file_name="heart_disease_risk_report.csv",
+        mime="text/csv"
+    )
